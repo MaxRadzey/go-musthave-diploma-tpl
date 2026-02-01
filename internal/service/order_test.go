@@ -263,6 +263,78 @@ func TestOrderService_ListOrders_RepoError(t *testing.T) {
 	}
 }
 
+func TestOrderService_GetOrderNumbersPendingAccrual_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mock.NewMockOrderRepository(ctrl)
+	svc := NewOrderService(repo)
+	ctx := context.Background()
+
+	repo.EXPECT().
+		ListNumbersPendingAccrual(ctx, OrderStatusesPendingAccrual).
+		Return([]string{"111", "222"}, nil)
+
+	numbers, err := svc.GetOrderNumbersPendingAccrual(ctx)
+	if err != nil {
+		t.Fatalf("GetOrderNumbersPendingAccrual: %v", err)
+	}
+	if len(numbers) != 2 || numbers[0] != "111" || numbers[1] != "222" {
+		t.Errorf("got %v", numbers)
+	}
+}
+
+func TestOrderService_ApplyAccrualResult_Updated(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mock.NewMockOrderRepository(ctrl)
+	svc := NewOrderService(repo)
+	ctx := context.Background()
+	accrual := 500
+
+	repo.EXPECT().
+		UpdateAccrualAndStatus(ctx, "12345678903", OrderStatusProcessed, &accrual).
+		Return(nil)
+
+	err := svc.ApplyAccrualResult(ctx, "12345678903", OrderStatusProcessed, &accrual)
+	if err != nil {
+		t.Fatalf("ApplyAccrualResult: %v", err)
+	}
+}
+
+func TestOrderService_ApplyAccrualResult_ValidationInvalidStatus(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	svc := NewOrderService(mock.NewMockOrderRepository(ctrl))
+	ctx := context.Background()
+
+	err := svc.ApplyAccrualResult(ctx, "12345678903", "UNKNOWN", nil)
+	if err == nil {
+		t.Fatal("expected ErrValidation")
+	}
+	var val *ErrValidation
+	if !errors.As(err, &val) {
+		t.Fatalf("expected *ErrValidation, got %T: %v", err, err)
+	}
+}
+
+func TestOrderService_ApplyAccrualResult_NoUpdateWhenProcessing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mock.NewMockOrderRepository(ctrl)
+	svc := NewOrderService(repo)
+	ctx := context.Background()
+
+	// PROCESSING не финальный — UpdateAccrualAndStatus не вызывается, возвращаем nil
+	err := svc.ApplyAccrualResult(ctx, "12345678903", OrderStatusProcessing, nil)
+	if err != nil {
+		t.Fatalf("ApplyAccrualResult: %v", err)
+	}
+}
+
 func intPtr(n int) *int {
 	return &n
 }
