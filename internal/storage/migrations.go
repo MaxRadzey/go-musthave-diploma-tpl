@@ -14,24 +14,22 @@ import (
 	"go.uber.org/zap"
 )
 
-// RunMigrations запускает миграции базы данных из директории migrations.
-// Принимает DSN строку подключения и создает временное подключение через *sql.DB,
-// необходимое для golang-migrate (библиотека не поддерживает pgxpool напрямую).
-// Если миграции уже применены, функция возвращает nil.
-func RunMigrations(dsn string) error {
+// RunMigrations запускает миграции по DSN и пути к папке с миграциями.
+// migrationsPath — путь к папке (относительный или абсолютный). Если пустой — используется "migrations" относительно текущей директории.
+func RunMigrations(dsn string, migrationsPath string) error {
 	if dsn == "" {
 		return nil
 	}
-
-	logger.Log.Info("Starting database migrations")
-
-	// Получаем абсолютный путь к директории migrations
-	migrationsPath, err := filepath.Abs("migrations")
+	if migrationsPath == "" {
+		migrationsPath = "migrations"
+	}
+	absPath, err := filepath.Abs(migrationsPath)
 	if err != nil {
-		logger.Log.Error("Failed to get migrations path", zap.Error(err))
 		return fmt.Errorf("failed to get migrations path: %w", err)
 	}
-	logger.Log.Debug("Migrations path", zap.String("path", migrationsPath))
+
+	logger.Log.Info("Starting database migrations")
+	logger.Log.Debug("Migrations path", zap.String("path", absPath))
 
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -40,23 +38,20 @@ func RunMigrations(dsn string) error {
 	}
 	defer db.Close()
 
-	// Создаем экземпляр драйвера PostgreSQL для миграций
 	instance, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		logger.Log.Error("Failed to create postgres instance for migrations", zap.Error(err))
 		return fmt.Errorf("failed to create postgres instance: %w", err)
 	}
 
-	// Создаем экземпляр мигратора
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", migrationsPath),
+		fmt.Sprintf("file://%s", absPath),
 		"postgres", instance)
 	if err != nil {
 		logger.Log.Error("Failed to create migrate instance", zap.Error(err))
 		return fmt.Errorf("failed to create migrate instance: %w", err)
 	}
 
-	// Запускаем миграции
 	logger.Log.Info("Running migrations")
 	err = m.Up()
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {

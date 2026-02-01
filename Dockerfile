@@ -17,5 +17,6 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 
 COPY --from=builder /app/gophermart .
+COPY migrations ./migrations
 
 ENTRYPOINT ["./gophermart"]
