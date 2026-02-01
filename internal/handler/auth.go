@@ -17,7 +17,7 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	user, err := h.UserService.Register(c.Request.Context(), req.Login, req.Password)
+	user, err := h.Services.User.Register(c.Request.Context(), req.Login, req.Password)
 	if err != nil {
 		var dup *repository.ErrDuplicateLogin
 		if errors.As(err, &dup) {
@@ -43,7 +43,7 @@ func (h *Handler) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	user, err := h.UserService.Login(c.Request.Context(), req.Login, req.Password)
+	user, err := h.Services.User.Login(c.Request.Context(), req.Login, req.Password)
 	if err != nil {
 		var invalid *service.ErrInvalidCredentials
 		if errors.As(err, &invalid) {

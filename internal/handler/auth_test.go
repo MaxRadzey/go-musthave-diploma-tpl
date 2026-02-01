@@ -23,8 +23,8 @@ import (
 func setupRouter(t *testing.T, ctrl *gomock.Controller) (*gin.Engine, *mock.MockUserRepository) {
 	t.Helper()
 	repo := mock.NewMockUserRepository(ctrl)
-	userService := service.NewUserService(repo)
-	h := handler.New(userService, "test-secret")
+	services := &service.Services{User: service.NewUserService(repo), Order: nil}
+	h := handler.New(services, "test-secret")
 	return router.SetupRouter(h, &config.Config{}), repo
 }
 
