@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/config"
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/logger"
+	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/service"
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/storage"
 	"go.uber.org/zap"
 )
@@ -19,7 +20,8 @@ func Run(cfg *config.Config) error {
 	}
 	defer storageResult.Close()
 
-	// userService := service.New(storageResult.UserRepository)
+	userService := service.NewUserService(storageResult.UserRepository)
+	_ = userService
 	// h := handler.New(userService)
 	// r := router.SetupRouter(h, cfg)
 	logger.Log.Info("Starting HTTP server", zap.String("address", cfg.RunAddress))
