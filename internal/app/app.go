@@ -23,7 +23,7 @@ func Run(cfg *config.Config) error {
 	defer storageResult.Close()
 
 	userService := service.NewUserService(storageResult.UserRepository)
-	h := handler.New(userService)
+	h := handler.New(userService, cfg.CookieSecret)
 	r := router.SetupRouter(h, cfg)
 	logger.Log.Info("Starting HTTP server", zap.String("address", cfg.RunAddress))
 	return r.Run(cfg.RunAddress)

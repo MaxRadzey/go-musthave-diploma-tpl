@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/auth"
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/repository"
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/service"
 )
@@ -31,7 +32,7 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
-	_ = user
+	auth.SetAuthCookie(c.Writer, user.ID, h.CookieSecret)
 	c.Status(http.StatusOK)
 }
 
@@ -57,6 +58,6 @@ func (h *Handler) Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
-	_ = user
+	auth.SetAuthCookie(c.Writer, user.ID, h.CookieSecret)
 	c.Status(http.StatusOK)
 }

@@ -24,7 +24,7 @@ func setupRouter(t *testing.T, ctrl *gomock.Controller) (*gin.Engine, *mock.Mock
 	t.Helper()
 	repo := mock.NewMockUserRepository(ctrl)
 	userService := service.NewUserService(repo)
-	h := handler.New(userService)
+	h := handler.New(userService, "test-secret")
 	return router.SetupRouter(h, &config.Config{}), repo
 }
 

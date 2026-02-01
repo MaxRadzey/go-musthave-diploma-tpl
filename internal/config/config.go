@@ -9,14 +9,16 @@ type Config struct {
 	RunAddress           string
 	DatabaseDSN          string
 	AccrualSystemAddress string
-	LogLevel         string
+	LogLevel             string
+	CookieSecret         string
 }
 
 func New() *Config {
 	return &Config{
-		RunAddress:       "localhost:8080",
-		LogLevel:         "info",
-		DatabaseDSN:      "postgres://shortener:shortener@localhost:5432/shortener",
+		RunAddress:   "localhost:8080",
+		LogLevel:     "info",
+		DatabaseDSN:  "postgres://shortener:shortener@localhost:5432/shortener",
+		CookieSecret: "dev-secret",
 	}
 }
 
@@ -29,6 +31,9 @@ func ParseEnv(config *Config) {
 	}
 	if DatabaseDSN := os.Getenv("DATABASE_DSN"); DatabaseDSN != "" {
 		config.DatabaseDSN = DatabaseDSN
+	}
+	if s := os.Getenv("COOKIE_SECRET"); s != "" {
+		config.CookieSecret = s
 	}
 }
 
