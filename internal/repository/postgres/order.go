@@ -1,0 +1,85 @@
+package postgres
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+
+	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/models"
+	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/repository"
+)
+
+// OrderRepository — реализация OrderRepository для PostgreSQL.
+type OrderRepository struct {
+	db *sql.DB
+}
+
+// NewOrderRepository создаёт репозиторий заказов.
+func NewOrderRepository(db *sql.DB) *OrderRepository {
+	return &OrderRepository{db: db}
+}
+
+// nullInt64ToAccrual конвертирует sql.NullInt64 в *int для поля Accrual модели.
+func nullInt64ToAccrual(n sql.NullInt64) *int {
+	if !n.Valid {
+		return nil
+	}
+	v := int(n.Int64)
+	return &v
+}
+
+// GetByNumber возвращает заказ по номеру. Если не найден — *repository.ErrOrderNotFound.
+func (r *OrderRepository) GetByNumber(ctx context.Context, number string) (*models.Order, error) {
+	q := `SELECT id, user_id, number, status, accrual, uploaded_at FROM orders WHERE number = $1`
+	var o models.Order
+	var accrual sql.NullInt64
+	err := r.db.QueryRowContext(ctx, q, number).Scan(
+		&o.ID, &o.UserID, &o.Number, &o.Status, &accrual, &o.UploadedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, &repository.ErrOrderNotFound{Number: number}
+		}
+		return nil, err
+	}
+	o.Accrual = nullInt64ToAccrual(accrual)
+	return &o, nil
+}
+
+// Create вставляет заказ.
+func (r *OrderRepository) Create(ctx context.Context, userID int64, number, status string) (*models.Order, error) {
+	q := `INSERT INTO orders (user_id, number, status) VALUES ($1, $2, $3)
+	      RETURNING id, user_id, number, status, accrual, uploaded_at`
+	var o models.Order
+	var accrual sql.NullInt64
+	err := r.db.QueryRowContext(ctx, q, userID, number, status).Scan(
+		&o.ID, &o.UserID, &o.Number, &o.Status, &accrual, &o.UploadedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	o.Accrual = nullInt64ToAccrual(accrual)
+	return &o, nil
+}
+
+// ListByUserID возвращает заказы пользователя по uploaded_at DESC.
+func (r *OrderRepository) ListByUserID(ctx context.Context, userID int64) ([]*models.Order, error) {
+	q := `SELECT id, user_id, number, status, accrual, uploaded_at FROM orders
+	      WHERE user_id = $1 ORDER BY uploaded_at DESC`
+	rows, err := r.db.QueryContext(ctx, q, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []*models.Order
+	for rows.Next() {
+		var o models.Order
+		var accrual sql.NullInt64
+		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &o.Status, &accrual, &o.UploadedAt); err != nil {
+			return nil, err
+		}
+		o.Accrual = nullInt64ToAccrual(accrual)
+		list = append(list, &o)
+	}
+	return list, rows.Err()
+}
