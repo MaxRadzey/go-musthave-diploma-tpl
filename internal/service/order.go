@@ -15,8 +15,11 @@ const (
 	OrderStatusNew        = "NEW"
 	OrderStatusProcessing = "PROCESSING"
 	OrderStatusInvalid    = "INVALID"
-	OrderStatusProcessed   = "PROCESSED"
+	OrderStatusProcessed  = "PROCESSED"
 )
+
+// OrderStatusesPendingAccrual — статусы заказов, которые нужно опрашивать во внешней системе начислений.
+var OrderStatusesPendingAccrual = []string{OrderStatusNew, OrderStatusProcessing}
 
 // OrderService — бизнес-логика заказов.
 type OrderService struct {

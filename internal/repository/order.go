@@ -14,4 +14,5 @@ type OrderRepository interface {
 	Create(ctx context.Context, userID int64, number, status string) (*models.Order, error)
 	ListByUserID(ctx context.Context, userID int64) ([]*models.Order, error)
 	UpdateAccrualAndStatus(ctx context.Context, number, status string, accrual *int) error
+	ListNumbersPendingAccrual(ctx context.Context, statuses []string) ([]string, error)
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/models"
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/repository"
@@ -102,4 +104,29 @@ func (r *OrderRepository) UpdateAccrualAndStatus(ctx context.Context, number, st
 		return &repository.ErrOrderNotFound{Number: number}
 	}
 	return nil
+}
+
+// ListNumbersPendingAccrual возвращает номера заказов в указанных статусах для опроса во внешней системе начислений.
+func (r *OrderRepository) ListNumbersPendingAccrual(ctx context.Context, statuses []string) ([]string, error) {
+	placeholders := make([]string, len(statuses))
+	args := make([]interface{}, len(statuses))
+	for i := range statuses {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = statuses[i]
+	}
+	q := `SELECT number FROM orders WHERE status IN (` + strings.Join(placeholders, ", ") + `) ORDER BY uploaded_at ASC`
+	rows, err := r.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var numbers []string
+	for rows.Next() {
+		var number string
+		if err := rows.Scan(&number); err != nil {
+			return nil, err
+		}
+		numbers = append(numbers, number)
+	}
+	return numbers, rows.Err()
 }

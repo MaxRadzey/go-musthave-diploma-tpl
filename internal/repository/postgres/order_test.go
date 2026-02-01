@@ -227,3 +227,50 @@ func TestOrderRepository_UpdateAccrualAndStatus_NotFound(t *testing.T) {
 		t.Fatalf("expected *ErrOrderNotFound, got %T: %v", err, err)
 	}
 }
+
+func TestOrderRepository_ListNumbersPendingAccrual(t *testing.T) {
+	repos := setupDB(t)
+	orderRepo, userRepo := repos.Order, repos.User
+	ctx := context.Background()
+
+	user, err := userRepo.Create(ctx, "alice", "hash")
+	if err != nil {
+		t.Fatalf("Create user: %v", err)
+	}
+	_, _ = orderRepo.Create(ctx, user.ID, "111", "NEW")
+	_, _ = orderRepo.Create(ctx, user.ID, "222", "PROCESSING")
+	_, _ = orderRepo.Create(ctx, user.ID, "333", "PROCESSED")
+	_, _ = orderRepo.Create(ctx, user.ID, "444", "INVALID")
+
+	numbers, err := orderRepo.ListNumbersPendingAccrual(ctx, []string{"NEW", "PROCESSING"})
+	if err != nil {
+		t.Fatalf("ListNumbersPendingAccrual: %v", err)
+	}
+	if len(numbers) != 2 {
+		t.Fatalf("expected 2 numbers (NEW, PROCESSING), got %d: %v", len(numbers), numbers)
+	}
+	if numbers[0] != "111" || numbers[1] != "222" {
+		t.Errorf("expected [111, 222] by uploaded_at ASC, got %v", numbers)
+	}
+}
+
+func TestOrderRepository_ListNumbersPendingAccrual_Empty(t *testing.T) {
+	repos := setupDB(t)
+	orderRepo, userRepo := repos.Order, repos.User
+	ctx := context.Background()
+
+	user, err := userRepo.Create(ctx, "alice", "hash")
+	if err != nil {
+		t.Fatalf("Create user: %v", err)
+	}
+	_, _ = orderRepo.Create(ctx, user.ID, "111", "PROCESSED")
+	_, _ = orderRepo.Create(ctx, user.ID, "222", "INVALID")
+
+	numbers, err := orderRepo.ListNumbersPendingAccrual(ctx, []string{"NEW", "PROCESSING"})
+	if err != nil {
+		t.Fatalf("ListNumbersPendingAccrual: %v", err)
+	}
+	if len(numbers) != 0 {
+		t.Errorf("expected empty list, got %v", numbers)
+	}
+}
