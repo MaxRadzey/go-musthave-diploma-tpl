@@ -79,3 +79,17 @@ func (mr *MockOrderRepositoryMockRecorder) ListByUserID(ctx, userID interface{})
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByUserID", reflect.TypeOf((*MockOrderRepository)(nil).ListByUserID), ctx, userID)
 }
+
+// UpdateAccrualAndStatus mocks base method.
+func (m *MockOrderRepository) UpdateAccrualAndStatus(ctx context.Context, number, status string, accrual *int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAccrualAndStatus", ctx, number, status, accrual)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAccrualAndStatus indicates an expected call of UpdateAccrualAndStatus.
+func (mr *MockOrderRepositoryMockRecorder) UpdateAccrualAndStatus(ctx, number, status, accrual interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAccrualAndStatus", reflect.TypeOf((*MockOrderRepository)(nil).UpdateAccrualAndStatus), ctx, number, status, accrual)
+}

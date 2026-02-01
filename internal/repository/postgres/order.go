@@ -83,3 +83,23 @@ func (r *OrderRepository) ListByUserID(ctx context.Context, userID int64) ([]*mo
 	}
 	return list, rows.Err()
 }
+
+// UpdateAccrualAndStatus обновляет status и accrual заказа по номеру. Если заказ не найден — *repository.ErrOrderNotFound.
+func (r *OrderRepository) UpdateAccrualAndStatus(ctx context.Context, number, status string, accrual *int) error {
+	var accrualVal sql.NullInt64
+	if accrual != nil {
+		accrualVal = sql.NullInt64{Int64: int64(*accrual), Valid: true}
+	}
+	res, err := r.db.ExecContext(ctx,
+		`UPDATE orders SET status = $1, accrual = $2 WHERE number = $3`,
+		status, accrualVal, number,
+	)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return &repository.ErrOrderNotFound{Number: number}
+	}
+	return nil
+}

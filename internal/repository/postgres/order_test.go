@@ -180,3 +180,50 @@ func TestOrderRepository_ListByUserID_OnlyThisUser(t *testing.T) {
 		t.Errorf("Number: got %q", list[0].Number)
 	}
 }
+
+func TestOrderRepository_UpdateAccrualAndStatus_Updated(t *testing.T) {
+	repos := setupDB(t)
+	orderRepo, userRepo := repos.Order, repos.User
+	ctx := context.Background()
+
+	user, err := userRepo.Create(ctx, "alice", "hash")
+	if err != nil {
+		t.Fatalf("Create user: %v", err)
+	}
+	_, err = orderRepo.Create(ctx, user.ID, "12345678903", "NEW")
+	if err != nil {
+		t.Fatalf("Create order: %v", err)
+	}
+
+	accrual := 500
+	err = orderRepo.UpdateAccrualAndStatus(ctx, "12345678903", "PROCESSED", &accrual)
+	if err != nil {
+		t.Fatalf("UpdateAccrualAndStatus: %v", err)
+	}
+
+	order, err := orderRepo.GetByNumber(ctx, "12345678903")
+	if err != nil {
+		t.Fatalf("GetByNumber: %v", err)
+	}
+	if order.Status != "PROCESSED" {
+		t.Errorf("Status: got %q", order.Status)
+	}
+	if order.Accrual == nil || *order.Accrual != 500 {
+		t.Errorf("Accrual: got %v", order.Accrual)
+	}
+}
+
+func TestOrderRepository_UpdateAccrualAndStatus_NotFound(t *testing.T) {
+	repos := setupDB(t)
+	orderRepo := repos.Order
+	ctx := context.Background()
+
+	err := orderRepo.UpdateAccrualAndStatus(ctx, "99999999999", "PROCESSED", nil)
+	if err == nil {
+		t.Fatal("expected ErrOrderNotFound")
+	}
+	var notFound *repository.ErrOrderNotFound
+	if !errors.As(err, &notFound) {
+		t.Fatalf("expected *ErrOrderNotFound, got %T: %v", err, err)
+	}
+}
