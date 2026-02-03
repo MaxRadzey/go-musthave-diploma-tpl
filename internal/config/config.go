@@ -3,12 +3,14 @@ package config
 import (
 	"flag"
 	"os"
+	"time"
 )
 
 type Config struct {
 	RunAddress           string
 	DatabaseDSN          string
 	AccrualSystemAddress string
+	AccrualPollInterval  time.Duration
 	LogLevel             string
 	CookieSecret         string
 }
@@ -20,6 +22,7 @@ func New() *Config {
 		DatabaseDSN:          "postgres://shortener:shortener@localhost:5432/shortener",
 		CookieSecret:         "dev-secret",
 		AccrualSystemAddress: "",
+		AccrualPollInterval:  2 * time.Second,
 	}
 }
 
