@@ -28,3 +28,12 @@ type ErrOrderNotFound struct {
 func (e *ErrOrderNotFound) Error() string {
 	return fmt.Sprintf("order with number %q not found", e.Number)
 }
+
+// ErrDuplicateWithdrawalOrder — списание по этому номеру заказа уже было (повторная подача).
+type ErrDuplicateWithdrawalOrder struct {
+	Order string
+}
+
+func (e *ErrDuplicateWithdrawalOrder) Error() string {
+	return fmt.Sprintf("withdrawal for order %q already exists", e.Order)
+}

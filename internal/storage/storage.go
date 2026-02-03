@@ -12,9 +12,10 @@ import (
 
 // Storage — подключение к БД и репозитории.
 type Storage struct {
-	db               *sql.DB
-	UserRepository   repository.UserRepository
-	OrderRepository  repository.OrderRepository
+	db                  *sql.DB
+	UserRepository      repository.UserRepository
+	OrderRepository     repository.OrderRepository
+	WithdrawalRepository repository.WithdrawalRepository
 }
 
 // InitializeStorage запускает миграции, подключается к БД и создаёт репозитории.
@@ -35,9 +36,10 @@ func InitializeStorage(dsn string) (*Storage, error) {
 		return nil, fmt.Errorf("ping db: %w", err)
 	}
 	return &Storage{
-		db:               db,
-		UserRepository:   postgres.NewUserRepository(db),
-		OrderRepository:  postgres.NewOrderRepository(db),
+		db:                   db,
+		UserRepository:       postgres.NewUserRepository(db),
+		OrderRepository:      postgres.NewOrderRepository(db),
+		WithdrawalRepository: postgres.NewWithdrawalRepository(db),
 	}, nil
 }
 
