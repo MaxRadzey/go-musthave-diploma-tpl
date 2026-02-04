@@ -78,3 +78,17 @@ func (mr *MockWithdrawalRepositoryMockRecorder) ListByUserID(ctx, userID interfa
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByUserID", reflect.TypeOf((*MockWithdrawalRepository)(nil).ListByUserID), ctx, userID)
 }
+
+// Withdraw mocks base method.
+func (m *MockWithdrawalRepository) Withdraw(ctx context.Context, userID int64, order string, sum int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Withdraw", ctx, userID, order, sum)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Withdraw indicates an expected call of Withdraw.
+func (mr *MockWithdrawalRepositoryMockRecorder) Withdraw(ctx, userID, order, sum interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Withdraw", reflect.TypeOf((*MockWithdrawalRepository)(nil).Withdraw), ctx, userID, order, sum)
+}

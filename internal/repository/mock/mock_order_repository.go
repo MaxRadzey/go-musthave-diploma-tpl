@@ -95,6 +95,21 @@ func (mr *MockOrderRepositoryMockRecorder) ListNumbersPendingAccrual(ctx, status
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNumbersPendingAccrual", reflect.TypeOf((*MockOrderRepository)(nil).ListNumbersPendingAccrual), ctx, statuses)
 }
 
+// GetTotalAccrualsByUserID mocks base method.
+func (m *MockOrderRepository) GetTotalAccrualsByUserID(ctx context.Context, userID int64) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTotalAccrualsByUserID", ctx, userID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTotalAccrualsByUserID indicates an expected call of GetTotalAccrualsByUserID.
+func (mr *MockOrderRepositoryMockRecorder) GetTotalAccrualsByUserID(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTotalAccrualsByUserID", reflect.TypeOf((*MockOrderRepository)(nil).GetTotalAccrualsByUserID), ctx, userID)
+}
+
 // UpdateAccrualAndStatus mocks base method.
 func (m *MockOrderRepository) UpdateAccrualAndStatus(ctx context.Context, number, status string, accrual *int) error {
 	m.ctrl.T.Helper()

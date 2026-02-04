@@ -16,4 +16,6 @@ type WithdrawalRepository interface {
 	GetTotalWithdrawnByUserID(ctx context.Context, userID int64) (int64, error)
 	// ListByUserID возвращает все списания пользователя от новых к старым (ORDER BY processed_at DESC).
 	ListByUserID(ctx context.Context, userID int64) ([]*models.Withdrawal, error)
+	// Withdraw атомарно проверяет баланс (начисления − списания >= sum), вставляет списание. Блокировка по user_id (advisory lock). ErrInsufficientFunds или *ErrDuplicateWithdrawalOrder.
+	Withdraw(ctx context.Context, userID int64, order string, sum int64) error
 }

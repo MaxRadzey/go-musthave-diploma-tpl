@@ -18,6 +18,9 @@ func SetupRouter(h *handler.Handler, cfg *config.Config) *gin.Engine {
 		{
 			protected.POST("/orders", h.PostOrders)
 			protected.GET("/orders", h.GetOrders)
+			protected.GET("/balance", h.GetBalance)
+			protected.POST("/balance/withdraw", h.PostWithdraw)
+			protected.GET("/withdrawals", h.GetWithdrawals)
 		}
 	}
 	return r

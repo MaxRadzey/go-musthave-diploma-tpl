@@ -19,3 +19,22 @@ type OrderItem struct {
 	Accrual    *float64 `json:"accrual,omitempty"`
 	UploadedAt string   `json:"uploaded_at"`
 }
+
+// BalanceResponse — ответ GET /api/user/balance.
+type BalanceResponse struct {
+	Current   float64 `json:"current"`
+	Withdrawn float64 `json:"withdrawn"`
+}
+
+// WithdrawRequest — тело POST /api/user/balance/withdraw.
+type WithdrawRequest struct {
+	Order string  `json:"order"`
+	Sum   float64 `json:"sum"`
+}
+
+// WithdrawalItem — элемент списка списаний GET /api/user/withdrawals.
+type WithdrawalItem struct {
+	Order       string  `json:"order"`
+	Sum         float64 `json:"sum"`
+	ProcessedAt string  `json:"processed_at"`
+}

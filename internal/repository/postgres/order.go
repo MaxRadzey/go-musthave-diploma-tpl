@@ -130,3 +130,14 @@ func (r *OrderRepository) ListNumbersPendingAccrual(ctx context.Context, statuse
 	}
 	return numbers, rows.Err()
 }
+
+// GetTotalAccrualsByUserID возвращает SUM(COALESCE(accrual, 0)) по заказам пользователя со статусом PROCESSED.
+func (r *OrderRepository) GetTotalAccrualsByUserID(ctx context.Context, userID int64) (int64, error) {
+	q := `SELECT COALESCE(SUM(COALESCE(accrual, 0)), 0) FROM orders WHERE user_id = $1 AND status = 'PROCESSED'`
+	var total int64
+	err := r.db.QueryRowContext(ctx, q, userID).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}

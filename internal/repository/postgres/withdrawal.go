@@ -63,3 +63,49 @@ func (r *WithdrawalRepository) ListByUserID(ctx context.Context, userID int64) (
 	}
 	return list, rows.Err()
 }
+
+// Withdraw атомарно: блокировка по user_id, проверка баланса (начисления − списания >= sum), вставка списания.
+func (r *WithdrawalRepository) Withdraw(ctx context.Context, userID int64, order string, sum int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock($1)", userID)
+	if err != nil {
+		return err
+	}
+
+	var accruals int64
+	err = tx.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(COALESCE(accrual, 0)), 0) FROM orders WHERE user_id = $1 AND status = 'PROCESSED'`,
+		userID,
+	).Scan(&accruals)
+	if err != nil {
+		return err
+	}
+
+	var withdrawn int64
+	err = tx.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(sum), 0) FROM withdrawals WHERE user_id = $1`,
+		userID,
+	).Scan(&withdrawn)
+	if err != nil {
+		return err
+	}
+
+	if accruals-withdrawn < sum {
+		return &repository.ErrInsufficientFunds{Order: order}
+	}
+
+	_, err = tx.ExecContext(ctx, `INSERT INTO withdrawals (user_id, "order", sum) VALUES ($1, $2, $3)`, userID, order, sum)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return &repository.ErrDuplicateWithdrawalOrder{Order: order}
+		}
+		return err
+	}
+	return tx.Commit()
+}

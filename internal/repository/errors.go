@@ -37,3 +37,12 @@ type ErrDuplicateWithdrawalOrder struct {
 func (e *ErrDuplicateWithdrawalOrder) Error() string {
 	return fmt.Sprintf("withdrawal for order %q already exists", e.Order)
 }
+
+// ErrInsufficientFunds — на счёте недостаточно средств для списания (402).
+type ErrInsufficientFunds struct {
+	Order string
+}
+
+func (e *ErrInsufficientFunds) Error() string {
+	return fmt.Sprintf("insufficient funds for order %q", e.Order)
+}
