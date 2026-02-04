@@ -10,7 +10,7 @@ import (
 // SetupRouter создаёт Gin-роутер.
 func SetupRouter(h *handler.Handler, cfg *config.Config) *gin.Engine {
 	r := gin.Default()
-	api := r.Group("/api/user")
+	api := r.Group("/api/user", middleware.Gzip())
 	{
 		api.POST("/register", h.Register)
 		api.POST("/login", h.Login)
