@@ -3,6 +3,7 @@ package postgres_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/repository"
@@ -174,5 +175,83 @@ func TestWithdrawalRepository_ListByUserID_OnlyThisUser(t *testing.T) {
 	}
 	if list[0].Order != "111" || list[0].Sum != 100 {
 		t.Errorf("got order %q sum %d", list[0].Order, list[0].Sum)
+	}
+}
+
+// TestWithdrawalRepository_Withdraw_Concurrent использует конкурентные вызовы для проверки
+// атомарности операции Withdraw с advisory lock. Только один спрос должен пройти успешно.
+func TestWithdrawalRepository_Withdraw_Concurrent(t *testing.T) {
+	repos := setupDB(t)
+	withdrawalRepo, userRepo, orderRepo := repos.Withdrawal, repos.User, repos.Order
+	ctx := context.Background()
+
+	// Создаём пользователя с балансом 100 (один заказ PROCESSED с accrual=100)
+	user, err := userRepo.Create(ctx, "alice", "hash")
+	if err != nil {
+		t.Fatalf("Create user: %v", err)
+	}
+
+	order, err := orderRepo.Create(ctx, user.ID, "79927398713", "PROCESSED")
+	if err != nil {
+		t.Fatalf("Create order: %v", err)
+	}
+	// Обновляем accrual напрямую через SQL, так как нужно установить accrual для теста
+	accrual := 100
+	err = orderRepo.UpdateAccrualAndStatus(ctx, order.Number, "PROCESSED", &accrual)
+	if err != nil {
+		t.Fatalf("UpdateAccrualAndStatus: %v", err)
+	}
+
+	// Запускаем 10 конкурентных попыток списать по 100 (баланс = 100, только одна должна пройти)
+	const numGoroutines = 10
+	const withdrawAmount = int64(100)
+
+	var wg sync.WaitGroup
+	successCount := 0
+	var successMu sync.Mutex
+	errs := make([]error, numGoroutines)
+
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			orderNum := "2377225624" + string(rune('0'+idx))
+			err := withdrawalRepo.Withdraw(ctx, user.ID, orderNum, withdrawAmount)
+			errs[idx] = err
+			if err == nil {
+				successMu.Lock()
+				successCount++
+				successMu.Unlock()
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	// Проверяем, что только один спрос прошёл успешно
+	if successCount != 1 {
+		t.Errorf("expected exactly 1 successful withdrawal, got %d", successCount)
+	}
+
+	// Проверяем, что остальные получили ErrInsufficientFunds
+	insufficientCount := 0
+	for _, err := range errs {
+		if err != nil {
+			var insufficient *repository.ErrInsufficientFunds
+			if errors.As(err, &insufficient) {
+				insufficientCount++
+			}
+		}
+	}
+	if insufficientCount != numGoroutines-1 {
+		t.Errorf("expected %d ErrInsufficientFunds errors, got %d", numGoroutines-1, insufficientCount)
+	}
+
+	// Проверяем, что в БД ровно одна запись о списании
+	total, err := withdrawalRepo.GetTotalWithdrawnByUserID(ctx, user.ID)
+	if err != nil {
+		t.Fatalf("GetTotalWithdrawnByUserID: %v", err)
+	}
+	if total != withdrawAmount {
+		t.Errorf("expected total withdrawn %d, got %d", withdrawAmount, total)
 	}
 }

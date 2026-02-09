@@ -15,8 +15,54 @@ type Config struct {
 	CookieSecret         string
 }
 
-func New() *Config {
-	return &Config{
+// Option — функция для настройки конфигурации.
+type Option func(*Config)
+
+// WithRunAddress устанавливает адрес сервера.
+func WithRunAddress(addr string) Option {
+	return func(c *Config) {
+		c.RunAddress = addr
+	}
+}
+
+// WithDatabaseDSN устанавливает строку подключения к БД.
+func WithDatabaseDSN(dsn string) Option {
+	return func(c *Config) {
+		c.DatabaseDSN = dsn
+	}
+}
+
+// WithAccrualSystemAddress устанавливает адрес системы начислений.
+func WithAccrualSystemAddress(addr string) Option {
+	return func(c *Config) {
+		c.AccrualSystemAddress = addr
+	}
+}
+
+// WithAccrualPollInterval устанавливает интервал опроса системы начислений.
+func WithAccrualPollInterval(interval time.Duration) Option {
+	return func(c *Config) {
+		c.AccrualPollInterval = interval
+	}
+}
+
+// WithLogLevel устанавливает уровень логирования.
+func WithLogLevel(level string) Option {
+	return func(c *Config) {
+		c.LogLevel = level
+	}
+}
+
+// WithCookieSecret устанавливает секрет для cookies.
+func WithCookieSecret(secret string) Option {
+	return func(c *Config) {
+		c.CookieSecret = secret
+	}
+}
+
+// New создаёт конфигурацию с дефолтными значениями и применяет опции.
+func New(opts ...Option) *Config {
+	c := &Config{
 		RunAddress:           "localhost:8080",
 		LogLevel:             "info",
 		DatabaseDSN:          "postgres://shortener:shortener@localhost:5432/shortener",
@@ -24,6 +70,10 @@ func New() *Config {
 		AccrualSystemAddress: "",
 		AccrualPollInterval:  2 * time.Second,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 func ParseEnv(config *Config) {

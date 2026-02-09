@@ -2,6 +2,7 @@ package postgres_test
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/repository/postgres"
@@ -12,6 +13,7 @@ type testRepos struct {
 	User       *postgres.UserRepository
 	Order      *postgres.OrderRepository
 	Withdrawal *postgres.WithdrawalRepository
+	DB         *sql.DB // Добавляем доступ к БД для прямых SQL операций в тестах
 }
 
 // setupDB очищает таблицы orders, withdrawals и users и возвращает все репозитории.
@@ -25,5 +27,6 @@ func setupDB(t *testing.T) *testRepos {
 		User:       postgres.NewUserRepository(testDB),
 		Order:      postgres.NewOrderRepository(testDB),
 		Withdrawal: postgres.NewWithdrawalRepository(testDB),
+		DB:         testDB,
 	}
 }

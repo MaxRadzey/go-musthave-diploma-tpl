@@ -52,16 +52,13 @@ func (r *WithdrawalRepository) ListByUserID(ctx context.Context, userID int64) (
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var list []*models.Withdrawal
-	for rows.Next() {
+	return scanRows(rows, func(rows *sql.Rows) (*models.Withdrawal, error) {
 		var w models.Withdrawal
 		if err := rows.Scan(&w.ID, &w.UserID, &w.Order, &w.Sum, &w.ProcessedAt); err != nil {
 			return nil, err
 		}
-		list = append(list, &w)
-	}
-	return list, rows.Err()
+		return &w, nil
+	})
 }
 
 // Withdraw атомарно: блокировка по user_id, проверка баланса (начисления − списания >= sum), вставка списания.

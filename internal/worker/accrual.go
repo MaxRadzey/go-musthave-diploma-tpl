@@ -3,13 +3,13 @@ package worker
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/accrual"
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/logger"
 	"github.com/MaxRadzey/go-musthave-diploma-tpl/internal/service"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -63,30 +63,42 @@ func (w *AccrualWorker) doOnePass(ctx context.Context) {
 	if err != nil || len(numbers) == 0 {
 		return
 	}
-	sem := make(chan struct{}, maxConcurrent)
-	var wg sync.WaitGroup
+	
+	// Используем errgroup для управления конкурентностью и сбора ошибок
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(maxConcurrent)
+	
 	for _, number := range numbers {
-		wg.Add(1)
-		go func(num string) {
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			defer wg.Done()
-			w.processOrder(ctx, num)
-		}(number)
+		num := number // capture loop variable
+		g.Go(func() error {
+			w.processOrder(gctx, num)
+			return nil // processOrder логирует ошибки внутри, но не возвращает их
+		})
 	}
-	wg.Wait()
+	
+	if err := g.Wait(); err != nil {
+		logger.Log.Error("Error processing orders in accrual worker", zap.Error(err))
+	}
 }
 
 func (w *AccrualWorker) processOrder(ctx context.Context, number string) {
 	for retry := 0; retry <= maxRetries429; retry++ {
 		resp, err := w.client.GetOrder(ctx, number)
 		if err == nil {
-			_ = w.orderSvc.ApplyAccrualResult(ctx, resp.Order, resp.Status, resp.Accrual)
+			if applyErr := w.orderSvc.ApplyAccrualResult(ctx, resp.Order, resp.Status, resp.Accrual); applyErr != nil {
+				logger.Log.Error("Failed to apply accrual result",
+					zap.String("order", resp.Order),
+					zap.Error(applyErr))
+			}
 			return
 		}
 		var notReg *accrual.ErrOrderNotRegistered
 		if errors.As(err, &notReg) {
-			_ = w.orderSvc.ApplyAccrualResult(ctx, number, service.OrderStatusInvalid, nil)
+			if applyErr := w.orderSvc.ApplyAccrualResult(ctx, number, service.OrderStatusInvalid, nil); applyErr != nil {
+				logger.Log.Error("Failed to apply invalid status",
+					zap.String("order", number),
+					zap.Error(applyErr))
+			}
 			return
 		}
 		var rateLimit *accrual.ErrRateLimit
@@ -99,9 +111,15 @@ func (w *AccrualWorker) processOrder(ctx context.Context, number string) {
 					continue
 				}
 			}
+			logger.Log.Warn("Max retries reached for rate limit",
+				zap.String("order", number),
+				zap.Int("retries", retry))
 			return
 		}
 		// 500 / сеть — пропускаем, в следующем цикле попадёт снова
+		logger.Log.Debug("Temporary error processing order, will retry later",
+			zap.String("order", number),
+			zap.Error(err))
 		return
 	}
 }

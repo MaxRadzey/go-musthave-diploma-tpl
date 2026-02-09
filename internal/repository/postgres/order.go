@@ -72,18 +72,15 @@ func (r *OrderRepository) ListByUserID(ctx context.Context, userID int64) ([]*mo
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var list []*models.Order
-	for rows.Next() {
+	return scanRows(rows, func(rows *sql.Rows) (*models.Order, error) {
 		var o models.Order
 		var accrual sql.NullInt64
 		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &o.Status, &accrual, &o.UploadedAt); err != nil {
 			return nil, err
 		}
 		o.Accrual = nullInt64ToAccrual(accrual)
-		list = append(list, &o)
-	}
-	return list, rows.Err()
+		return &o, nil
+	})
 }
 
 // UpdateAccrualAndStatus обновляет status и accrual заказа по номеру. Если заказ не найден — *repository.ErrOrderNotFound.
@@ -119,16 +116,13 @@ func (r *OrderRepository) ListNumbersPendingAccrual(ctx context.Context, statuse
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var numbers []string
-	for rows.Next() {
+	return scanRows(rows, func(rows *sql.Rows) (string, error) {
 		var number string
 		if err := rows.Scan(&number); err != nil {
-			return nil, err
+			return "", err
 		}
-		numbers = append(numbers, number)
-	}
-	return numbers, rows.Err()
+		return number, nil
+	})
 }
 
 // GetTotalAccrualsByUserID возвращает SUM(COALESCE(accrual, 0)) по заказам пользователя со статусом PROCESSED.
